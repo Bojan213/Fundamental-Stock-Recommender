@@ -1,0 +1,324 @@
+#This program prints a vector of stock tickers that pass 8 of my 9 tests. The tests deal with a wide range of financial and analytical metrics. The recommended stocks
+#should return profit in 1 year's time.
+
+#***************************************
+#***************************************
+#PART 6: S&P 500 FILTER
+#***************************************
+#***************************************
+#ALL NECESSARY LIBRARIES FOR THE ENTIRE PROJECT
+library('BatchGetSymbols')
+library('rvest')
+library('dplyr')
+library('xml2')
+library('quantmod')
+library('stringr')
+library('tidyquant')
+library('ggplot2')
+
+#Functions for Filtered Stock Tickers
+#Get the information about the stock
+get_stock_data <- function(symbol)
+  {
+  days_back <- 1000
+today <- Sys.Date()
+  Past_Day <- Sys.Date() - days_back
+  frequency <- "daily"
+  #Get Information on Stock Ticker
+  stock_data <- BatchGetSymbols(symbol,
+                              first.date = Past_Day,
+                              freq.data = frequency,
+                              last.date = today,
+                              cache.folder = file.path(tempdir(),
+                                                  'BGS_Cache') )
+    return(stock_data)
+  }
+#Calculate the percent change from A to B
+percent_change <- function(a,b){
+  change <- (a-b)/b*100
+  return(change)
+}
+#Calculate the difference of the percent changes of two ranges
+percent_difference <- function(a,b){
+ c <- a-b
+  return(c)
+}
+#Function to Calculate the Moving Averages
+Moving_Average <- function(days_total, moving_average_days, closing_prices){
+  MA <- 1:(days_total)
+vec_MA <- 1:(days_total)
+for(val in vec_MA) {
+  if(val+moving_average_days>days_total){
+    break
+  }
+  if(moving_average_days!=0){
+  MA[val+moving_average_days] <- mean(closing_prices[val:(val+moving_average_days)])
+  }else{
+    MA[val] <- mean(closing_prices[1:(val)])
+  }
+}
+  if(moving_average_days!=0){
+#Fill in first 'moving_average_days' days with NA
+bs_1 <- 1:moving_average_days
+for(a in bs_1){
+  MA[a] <- NA
+}
+  }
+  return(MA)
+}
+#Print the graphs
+graphs <- function(a,b){
+print(a)
+print(b)
+}
+
+# ****************************************
+# ****************************************
+# **********Part 6: Stock Filter**********
+# ****************************************
+# ****************************************
+mat_stock <- tq_index("SP500")
+vec_stock <-  mat_stock[,1]
+length_vec <- 1:nrow(vec_stock)
+boolean_stock_vector <- 1:length(length_vec)
+boolean_stock_vector[1:length(length_vec)] <- FALSE
+#Get data from the big markets (S&P, DOW, Russell)
+SP500_data <- get_stock_data("^GSPC")
+  DOW_data <- get_stock_data("^DJI")
+MA_length <- length(SP500_data$df.tickers$price.close)
+#Get prices from the big markets
+today_SP500 <- SP500_data$df.tickers$price.close[MA_length]
+  day_5_SP500 <- SP500_data$df.tickers$price.close[MA_length-5]
+  day_25_SP500 <- SP500_data$df.tickers$price.close[(MA_length-25)]
+  day_100_SP500 <- SP500_data$df.tickers$price.close[(MA_length-100)]
+  day_200_SP500 <- SP500_data$df.tickers$price.close[(MA_length-200)]
+  day_500_SP500 <- SP500_data$df.tickers$price.close[(MA_length-500)]
+  today_DOW <- DOW_data$df.tickers$price.close[MA_length]
+  day_5_DOW <- DOW_data$df.tickers$price.close[MA_length-5]
+  day_25_DOW <- DOW_data$df.tickers$price.close[(MA_length-25)]
+  day_100_DOW <- DOW_data$df.tickers$price.close[(MA_length-100)]
+  day_200_DOW <- DOW_data$df.tickers$price.close[(MA_length-200)]
+  day_500_DOW <- DOW_data$df.tickers$price.close[(MA_length-500)]
+#Get the percent changes for the big markets
+SP500_5_day_change <- percent_change(today_SP500, day_5_SP500)
+  SP500_25_day_change <- percent_change(today_SP500, day_25_SP500)
+  SP500_100_day_change <- percent_change(today_SP500, day_100_SP500)
+  SP500_200_day_change <- percent_change(today_SP500, day_200_SP500)
+  SP500_500_day_change <- percent_change(today_SP500, day_500_SP500)
+  DOW_5_day_change <- percent_change(today_DOW, day_5_DOW)
+  DOW_25_day_change <- percent_change(today_DOW, day_25_DOW)
+  DOW_100_day_change <- percent_change(today_DOW, day_100_DOW)
+  DOW_200_day_change <- percent_change(today_DOW, day_200_DOW)
+  DOW_500_day_change <- percent_change(today_DOW, day_500_DOW)
+
+#Run Loop that displays Graph and Moving Average of a Stock
+for(k in length_vec){
+  score <- 0
+  symbol <- as.character(vec_stock[k,1])
+  days_back <- 1000
+today <- Sys.Date()
+  Past_Day <- today - days_back
+  frequency <- "daily"
+try(stock_data <-  BatchGetSymbols(symbol,
+                              first.date = Past_Day,
+                              freq.data = frequency,
+                              last.date = today,
+                              cache.folder = file.path(tempdir(),
+                                                  'BGS_Cache') ))
+  closing_prices <- stock_data$df.tickers$price.close
+  #Get the price of the stock/Market various days ago
+  try(today_stock <- closing_prices[MA_length])
+  try(day_5_stock <- closing_prices[MA_length-5])
+  try(day_25_stock <- closing_prices[(MA_length-25)])
+  try(day_100_stock <- closing_prices[(MA_length-100)])
+  try(day_200_stock <- closing_prices[(MA_length-200)])
+  try(day_500_stock <- closing_prices[(MA_length-500)])
+#Calculate the Performance of the stock versus the performance of the Market over Various Time periods
+  try(stock_5_day_change <- percent_change(today_stock, day_5_stock))
+  try(stock_25_day_change <- percent_change(today_stock, day_25_stock))
+  try(stock_100_day_change <- percent_change(today_stock, day_100_stock))
+  try(stock_200_day_change <- percent_change(today_stock, day_200_stock))
+  try(stock_500_day_change <- percent_change(today_stock, day_500_stock))
+  #Calculate the difference in performance between the market and the stock over those ranges
+  try(SP_v_Stock_5 <- percent_difference(stock_5_day_change, SP500_5_day_change))
+  try(SP_v_Stock_25 <- percent_difference(stock_25_day_change, SP500_25_day_change))
+  try(SP_v_Stock_100 <- percent_difference(stock_100_day_change, SP500_100_day_change))
+  try(SP_v_Stock_200 <- percent_difference(stock_200_day_change, SP500_200_day_change))
+  try(SP_v_Stock_500 <- percent_difference(stock_500_day_change, SP500_500_day_change))
+  try(DOW_v_Stock_5 <- percent_difference(stock_5_day_change, DOW_5_day_change))
+  try(DOW_v_Stock_25 <- percent_difference(stock_25_day_change, DOW_25_day_change))
+  try(DOW_v_Stock_100 <- percent_difference(stock_100_day_change, DOW_100_day_change))
+  try(DOW_v_Stock_200 <- percent_difference(stock_200_day_change, DOW_200_day_change))
+  try(DOW_v_Stock_500 <- percent_difference(stock_500_day_change, DOW_500_day_change))
+  #***************************************
+#***************************************
+#PART 1: Dividend and Earnings Analysis
+#***************************************
+#***************************************
+  symbol_1 <- tolower(symbol)
+#Specifying the url for desired website to be scraped
+url_2 <- paste0('https://www.marketwatch.com/investing/stock/', symbol_1,'/analystestimates')
+#Reading the HTML code from the website
+try(webpage_2 <- read_html(url_2))
+#Using CSS selectors to scrape the stock information
+#This is the future predictions
+try(stock_data_2 <- html_nodes(webpage_2,'td')%>%
+  html_text())
+#Convert EPS to Numerical
+try(EPS_Current<- as.numeric(stock_data_2[12]))
+#Calculate Earnings Growth
+try(Next_Year_EPS <- as.numeric(stock_data_2[20]))
+  try(tytny <- (Next_Year_EPS-EPS_Current)/EPS_Current*100)
+  #Calculate Earnings Growth
+try(Last_Year_EPS <- as.numeric(stock_data_2[18]))
+try(lytty <- (EPS_Current-Last_Year_EPS)/Last_Year_EPS*100)
+#Calculate Number of Each Rating
+try(Buy <- as.numeric(stock_data_2[51]) + as.numeric(stock_data_2[55]))
+  try(Hold <- as.numeric(stock_data_2[59]))
+    try(Sell <- as.numeric(stock_data_2[63]) + as.numeric(stock_data_2[67]))
+#***************************************
+#***************************************
+#PART #2: Insider Trading
+#***************************************
+#***************************************
+#Specifying the url for desired website to be scraped
+url_3 <- paste0('https://www.marketwatch.com/investing/stock/', symbol_1, '/insideractions')
+#Reading the HTML code from the website
+try(webpage_3 <- read_html(url_3))
+#Using CSS selectors to scrape the stock information
+#This is the insider information
+try(stock_data_3a <- html_nodes(webpage_3, '.date') %>%
+  html_text())
+try(stock_data_3b <- html_nodes(webpage_3,'.transactionDesc')%>%
+  html_text())
+try(stock_data_3c <- html_nodes(webpage_3,'.shares')%>%
+  html_text())
+try(stock_data_3d <- html_nodes(webpage_3, '.value')%>%
+  html_text())
+#Organize the insider data
+try(master_length <- length(stock_data_3b))
+try(stock_data_3a <- stock_data_3a[2:(master_length+1)])
+try(stock_data_3c <- as.numeric(gsub(",", "", stock_data_3c[2:(master_length+1)])))
+try(stock_data_3d <- stock_data_3d[2:(master_length+1)])
+#Find where the trader(s) is/are disposing of stocks that cost actual money
+try(bool_vec_2 <- (stock_data_3d != 0))
+  try(stock_data_3b <- stock_data_3b[bool_vec_2])
+  try(stock_data_3c <- stock_data_3c[bool_vec_2])
+  try(bool_vec <- grepl("Disposition", stock_data_3b))
+  #Find stocks bought and stocks sold
+try(stocks_sold <- stock_data_3c[bool_vec])
+try(stocks_bought <- stock_data_3c[!bool_vec])
+#Calculate the net activity of insiders
+try(total_shares <- sum(stocks_bought) - sum(stocks_sold))
+  #***************************************
+#***************************************
+#Part 3: Company Profile
+#***************************************
+#***************************************
+url_4 <- paste0('https://www.marketwatch.com/investing/stock/',symbol_1,'/profile')
+#Read in the data for the company profile
+try(stock_data_4 <- read_html(url_4) %>%
+  html_nodes('.lastcolumn')%>%
+  html_text())
+value_counter <- 0
+  liquid_counter <- 0
+  profit_counter <- 0
+  #P/E
+  try(PE <- as.numeric(stock_data_4[12]))
+try(if(PE<30){
+  value_counter <- value_counter + 1
+})
+  #P/S
+  try(PS <- as.numeric(stock_data_4[15]))
+try(if(PS<2){
+  value_counter <- value_counter + 1
+})
+  #P/B
+  try(PB <- as.numeric(stock_data_4[16]))
+try(if(PB<3){
+  value_counter <- value_counter + 1
+})
+  #EV/EBITDA
+  try(EVEBITDA <- as.numeric(stock_data_4[17]))
+try(if(EVEBITDA<13){
+  value_counter <- value_counter + 1
+})
+  #EV/S
+  try(EVS <- as.numeric(stock_data_4[18]))
+try(if(EVS<3){
+  value_counter <- value_counter + 1
+})
+  #Current Liquidity Ratio
+  try(CLR <- as.numeric(stock_data_4[25]))
+try(if(CLR>1){
+  liquid_counter <- liquid_counter + 1
+})
+  #Quick Liquidity Ratio
+  try(QLR <- as.numeric(stock_data_4[26]))
+try(if(QLR>1){
+  liquid_counter <- liquid_counter + 1
+})
+  #Cash Liquidity Ratio
+  try(CaLR <- as.numeric(stock_data_4[27]))
+try(if(CaLR<0.5){
+  liquid_counter <- liquid_counter + 1
+})
+  #Net Profit Margin
+  try(Profit_Margin <- as.numeric(stock_data_4[31]))
+  #Estimated Price
+  try(Estimated_Price <- as.numeric(stock_data_2[4]))
+  #Initialize and calculate 20 day moving average
+try(MA_20 <- Moving_Average(MA_length, 19,closing_prices))
+#Initialize and calculate 50 day moving average
+try(MA_50 <- Moving_Average(MA_length, 49,closing_prices))
+#Initialize and calculate 200 day moving average
+try(MA_200 <- Moving_Average(MA_length, 199,closing_prices))
+  #Initialize and calculate 5 day moving average
+  try(MA_6 <- Moving_Average(MA_length, 5, closing_prices))
+  #Get Percent Changes for MA
+  try(percent_MA_20 <- (closing_prices[MA_length]/MA_20[MA_length]-1)*100)
+  try(percent_MA_50 <- (closing_prices[MA_length]/MA_50[MA_length]-1)*100)
+  try(percent_MA_200 <- (closing_prices[MA_length]/MA_200[MA_length]-1)*100)
+  try(percent_MA_6 <- (closing_prices[MA_length]/MA_6[MA_length]-1)*100)
+  #Final Statement
+  cat("\n")
+  #Calculate Score
+  try(if(tytny>10){
+    score <- score+1
+  })
+  try(if(total_shares>0){
+    score<- score+1
+  })
+  try(if(Buy>(Hold+Sell)){
+    score<-score+1
+  })
+  try(if(Estimated_Price>(1.1*today_stock)){
+    score<-score+1
+  })
+  try(if(lytty>=0 ){
+    score<-score+1
+  })
+  try(if(EPS_Current>0){
+    score<-score+1
+  })
+  try(if(Profit_Margin>15){
+    score<-score+1
+  })
+  try(if(liquid_counter>=2){
+    score<-score+1
+  })
+  try(if(value_counter>=2){
+    score<-score+1
+  })
+try(if(score >= 8){
+    boolean_stock_vector[k] <- TRUE
+  }else{
+    boolean_stock_vector[k] <- FALSE
+  })
+}
+#Isolate the Winners
+logical_values<- as.logical(boolean_stock_vector)
+vec_stock <- t(vec_stock)
+vec_stock <- as.vector(vec_stock)
+filtered_stock_vector <- vec_stock[logical_values]
+print(filtered_stock_vector)
